@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"technology\",\"from\":\"John Doe\",\"message\":\"El happy path cuando se deba implementar proyectos de RAG. Source: https://www.linkedin.com/posts/aws-ai_amazonbedrock-aws-generativeai-activity-7335729909241180188-VVNQ\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

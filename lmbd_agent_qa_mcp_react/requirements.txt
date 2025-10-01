@@ -1,0 +1,21 @@
+langchain-mcp-adapters
+langgraph-supervisor
+langgraph
+langchain[aws]
+python-dotenv
+logfire
+langchain-community
+langchain-core
+# uvx
+uv
+mcp
+duckduckgo-search
+slack_sdk
+langchain-anthropic
+# https://github.com/modelcontextprotocol/servers/tree/main/src/fetch
+mcp-server-fetch
+langchain-tavily
+slackstyler
+pytz
+langgraph-checkpoint-postgres
+requests

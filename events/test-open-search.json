@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"bot-dev\",\"from\":\"Bob Example\",\"message\":\"Alguien ha trabajado con Opensearch? Cuando quiero escalar la cantidad total de documentos insertados de 2k docs (~ 8k entries) a 10k docs (~ 70-80k entries), el dominio se comienza a caer. Estoy usando dos t3.small.search. Es para una prueba de concepto por lo que no requiero algo extremadamente caro. QUiero algo que me permita iterar rapido. Dame un detalle de lo que podria costar tambien\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

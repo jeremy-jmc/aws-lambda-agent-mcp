@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"ai-team\",\"from\":\"John Doe\",\"message\":\"buen día @Jane Roe , porfa trabaja en una poc tech de esto, la prox semana nos juntamos con todo technology para ver los resultados. https://aws.amazon.com/blogs/compute/introducing-aws-serverless-mcp-server-ai-powered-development-for-modern-applications/\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

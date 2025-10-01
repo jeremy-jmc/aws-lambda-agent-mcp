@@ -1,0 +1,8 @@
+{
+  "body": "{ \"user\": \"U08HV5L14TY\", \"type\": \"message\", \"ts\": \"1753124970.619789\", \"client_msg_id\": \"f7906a44-37dd-40a1-8423-be9b6966f234\", \"text\": \"<@U091QGYJFP0> ayuda a <@U0735VALUGM> con como implementar memoria para conversaciones con imagenes usando la libreria: <https://github.com/strands-agents/sdk-python>, Lambdas de AWS y algun sistema de memoria low-cost como S3 o DynamoDB\", \"team\": \"T78EUB24B\", \"channel\": \"C093PNCJATS\", \"event_ts\": \"1753124970.619789\", \"channel_type\": \"group\", \"bot_tag\": \"<@U091QGYJFP0>\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/evaluate_message"
+}

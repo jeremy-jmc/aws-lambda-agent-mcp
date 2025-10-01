@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"bot-dev\",\"from\":\"Jane Roe\",\"message\":\"I want to build a simple backend for a todo app using Python and deploy it to the cloud with AWS Serverless. Can you help me create a new project called my-todo-app. It should include basic functionality to add and list todos. Once it's set up, please build and deploy it with all the necessary permissions. I don’t need to review the changeset before deployment.\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

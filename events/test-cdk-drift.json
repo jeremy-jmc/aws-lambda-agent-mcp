@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"technology\",\"from\":\"John Doe\",\"message\":\"Nuevo feature en cdk: cdk drift, permite detectar si la infra en aws ya no coincide con el código cdk: https://www.linkedin.com/feed/update/urn:li:activity:7333607110850580480/\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

@@ -1,0 +1,8 @@
+boto3
+slack_sdk
+requests
+aws-lambda-powertools[tracer]
+boto3-stubs[lambda]
+langchain[aws]
+langchain-core
+python-dotenv

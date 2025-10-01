@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"technology\",\"from\":\"John Doe\",\"message\":\"@channel que tipo de keys usamos para bedrock, las short o long? https://dev.to/aws/amazon-bedrock-api-keys-simplified-authentication-for-developers-1ig0 @Jane Roe te encargo revisemos le best practices de eso y en 2 semanas juntanos al team para ver como mejoramos\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"1755060666.202789\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

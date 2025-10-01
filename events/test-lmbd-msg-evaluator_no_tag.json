@@ -1,0 +1,8 @@
+{
+  "body": "{ \"user\": \"U08HV5L14TY\", \"type\": \"message\", \"ts\": \"1753232055.893169\", \"client_msg_id\": \"9063b9f6-e750-453f-bcc4-60b84f84eae6\", \"text\": \"Alguien alguna vez ha comparado Strands Python SDK vs LangChain/LangGraph en AWS?\", \"team\": \"T78EUB24B\", \"channel\": \"C093PNCJATS\", \"event_ts\": \"1753232055.893169\", \"channel_type\": \"group\", \"bot_tag\": \"<@U091QGYJFP0>\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/evaluate_message"
+}

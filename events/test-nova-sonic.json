@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"technology\",\"from\":\"John Doe\",\"message\":\"@channel https://aws.amazon.com/about-aws/whats-new/2025/06/amazon-nova-sonic-spanish-language/ :exploding_head:\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"ai-team\",\"from\":\"Foo Bar\",\"message\":\"https://developers.googleblog.com/en/genai-processors/\\nInteresante\\nPor lo que he leído hasta ahora no sé si pueda ser integrado como backend de nuestras apps\\nSería interesante explorar si podemos integrarlo a AWS\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}

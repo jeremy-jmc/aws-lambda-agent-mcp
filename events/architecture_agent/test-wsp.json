@@ -1,0 +1,11 @@
+{
+  "body": {
+    "message": "Create a t2.micro EC2 instance in us-east-1 region.",
+    "from": "51993211937"
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/architecture_agent"
+}

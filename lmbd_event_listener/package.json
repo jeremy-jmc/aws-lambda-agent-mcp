@@ -1,0 +1,22 @@
+{
+  "name": "slack-event-listener",
+  "version": "1.0.0",
+  "description": "Slack event listener Lambda function",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.17.1",
+    "aws-sdk": "^2.1473.0"
+  },
+  "devDependencies": {
+  },
+  "keywords": [
+    "slack",
+    "lambda",
+    "aws"
+  ],
+  "author": "",
+  "license": "ISC"
+}

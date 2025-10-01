@@ -1,0 +1,509 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  slack-event-listener
+
+  SAM Template for Slack Event Listener Lambda function
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 8192
+    Architectures:
+      - x86_64
+
+Parameters:
+  SlackBotToken:
+    Type: String
+    Description: Slack Bot Token
+    NoEcho: true
+  SlackSigningSecret:
+    Type: String
+    Description: Slack Signing Secret
+    NoEcho: true
+  LogfireToken:
+    Type: String
+    Description: Logfire Token for logging
+    NoEcho: true
+  LangsmithApiKey:
+    Type: String
+    Description: LangSmith API Key for tracing
+    NoEcho: true
+  TavilyApiKey:
+    Type: String
+    Description: Tavily API Key for web search
+    NoEcho: true
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - prod
+    Description: Environment name
+  CredentialsAPIUrl:
+    Type: String
+    Description: URL credentials API 
+  CredentialsAPIXApiKey:
+    Type: String
+    Description: X-API-KEY for credentials API
+    NoEcho: true
+
+Resources:
+# *  SLACK EVENT LISTENER
+  SlackJSEventListenerFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ./lmbd_event_listener/
+      Handler: main.handler
+      Runtime: nodejs22.x
+      Timeout: 60
+      Environment:
+        Variables:
+          SLACK_BOT_TOKEN: !Ref SlackBotToken
+          SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+          NODE_ENV: !Ref Environment
+          LOGFIRE_TOKEN: !Ref LogfireToken
+          LOCAL_EVALUATOR_URL: "http://host.docker.internal:3000/evaluate_message"
+          EVALUATOR_LAMBDA_ARN: !GetAtt SlackMessageRouter.Arn
+          SQS_QUEUE_URL: !Ref SlackMessagesQueue
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !GetAtt SlackMessageRouter.Arn
+        - Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:DeleteMessage
+              - sqs:ReceiveMessage
+              - sqs:GetQueueAttributes
+            Resource: 
+              - !GetAtt SlackMessagesQueue.Arn
+              - !GetAtt SlackMessagesDLQ.Arn
+        - Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+      Events:
+        SlackEvents:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /slack/events
+            Method: post
+
+
+# * SLACK QUEUES AND MESSAGE ROUTER
+  # SQS Dead Letter Queue for failed message processing
+  SlackMessagesDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-slack-messages-dlq.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  # Main SQS FIFO Queue for delayed message processing
+  SlackMessagesQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-slack-messages.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      DelaySeconds: 0 # Delay is set per message
+      MessageRetentionPeriod: 345600 # 4 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      VisibilityTimeout: 180 # 3 minutes (must be > SQS processor timeout of 120s)
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SlackMessagesDLQ.Arn
+        maxReceiveCount: 3
+  
+  # SQS Message Processor Lambda - processes delayed messages and sends to Evaluator
+  SqsMessageProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lmbd_sqs_processor/
+      Handler: main.lambda_handler
+      Runtime: python3.10
+      Timeout: 120 # 2 minutes - much shorter than the global 900s
+      Environment:
+        Variables:
+          EVALUATOR_LAMBDA_ARN: !GetAtt SlackMessageRouter.Arn
+          ENV: !Ref Environment
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !GetAtt SlackMessageRouter.Arn
+        - Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt SlackMessagesQueue.Arn
+        - Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SlackMessagesQueue.Arn
+            BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+
+  SlackMessageRouter:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lmbd_message_evaluator/
+      Handler: main.lambda_handler
+      Runtime: python3.10
+      MemorySize: 8192
+      Environment:
+        Variables:
+          SLACK_BOT_TOKEN: !Ref SlackBotToken
+          SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+          ENV: !Ref Environment
+          LANGSMITH_TRACING: "false"
+          LANGSMITH_API_KEY: !Ref LangsmithApiKey
+          LANGSMITH_ENDPOINT: "https://api.smith.langchain.com"
+          LOCAL_AGENT_QA_URL: "http://host.docker.internal:3000/research_agent"
+          LOCAL_AGENT_ARCHITECTURE_URL: "http://host.docker.internal:3000/architecture_agent"
+          AGENT_QA_LAMBDA_ARN: !GetAtt QAResearchAgentFunction.Arn
+          AGENT_ARCHITECTURE_LAMBDA_ARN: !GetAtt ArchitectureAgentFunction.Arn
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource: "*"
+        - Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: 
+              - !GetAtt QAResearchAgentFunction.Arn
+              - !GetAtt ArchitectureAgentFunction.Arn
+        - Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeTimeToLive
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+            Resource: !GetAtt CheckpointTable.Arn
+      Events:
+        SlackMessageRouter:
+          Type: Api
+          Properties:
+            Path: /evaluate_message
+            Method: post
+
+
+# *  QA RESEARCH AGENT MCP
+  LogTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: thread_ts
+        AttributeType: S
+      - AttributeName: message_ts
+        AttributeType: S
+      - AttributeName: channel_name
+        AttributeType: S
+      KeySchema:
+      - AttributeName: thread_ts
+        KeyType: HASH
+      - AttributeName: message_ts
+        KeyType: RANGE
+      GlobalSecondaryIndexes:
+      - IndexName: gsi1
+        KeySchema:
+        - AttributeName: channel_name
+          KeyType: HASH
+        - AttributeName: message_ts
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+  
+  SessionTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  QAResearchAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      # Use the new custom image with python:3.12-slim instead of Lambda base image
+      ImageConfig:
+        Command: ["main.lambda_handler"]
+      Environment:
+        Variables:
+          SLACK_BOT_TOKEN: !Ref SlackBotToken
+          SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+          TAVILY_API_KEY: !Ref TavilyApiKey
+          ENV: !Ref Environment
+          LOGFIRE_TOKEN: !Ref LogfireToken
+          LANGSMITH_TRACING: "false"
+          LANGSMITH_API_KEY: !Ref LangsmithApiKey
+          LANGSMITH_ENDPOINT: "https://api.smith.langchain.com"
+          DYNAMO_DB_SESSION_TABLE: !Ref SessionTable
+          DYNAMO_DB_LOG_TABLE: !Ref LogTable
+          
+          LOCAL_SENDER_FUNCTION_URL: "http://host.docker.internal:3000/send_message"
+          SENDER_FUNCTION_ARN: !GetAtt SlackMessageSenderFunction.Arn
+
+          # Add environment variables needed for MCP and uvx
+          PYTHONUNBUFFERED: "1"
+          PATH: "/usr/local/bin:/usr/bin:/bin:/var/task"
+          UV_CACHE_DIR: "/tmp/uv_cache"
+          UV_TOOL_DIR: "/tmp/uv_tools"
+          UV_PYTHON_INSTALL_DIR: "/tmp/uv_python"
+          XDG_CACHE_HOME: "/tmp/cache"
+          XDG_DATA_HOME: "/tmp/data"
+          TMPDIR: "/tmp"
+          TEMP: "/tmp"
+          TMP: "/tmp"
+          HOME: "/tmp"
+          # Additional UV configuration
+          UV_NO_SYNC: "1"
+          UV_SYSTEM_PYTHON: "1"
+      MemorySize: 10240 # Increase memory size to 10 GB
+      EphemeralStorage:
+        Size: 8192 # Increase ephemeral storage to 4GB
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+            Resource: !GetAtt LogTable.Arn
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+            Resource: !GetAtt SessionTable.Arn
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !GetAtt SlackMessageSenderFunction.Arn
+      Events:
+        SlackAgent:
+          Type: Api
+          Properties:
+            Path: /research_agent
+            Method: post
+    Metadata:
+      DockerContext: ./lmbd_agent_qa_mcp_react
+      Dockerfile: Dockerfile
+
+
+# *  ARCHITECTURE MCP AGENT
+  CheckpointTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  ArchitectureAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      # Use the new custom image with python:3.10.12-slim instead of Lambda base image
+      ImageConfig:
+        Command: ["main.lambda_handler"]
+      Environment:
+        Variables:
+          ENV: !Ref Environment
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_API_KEY: !Ref LangsmithApiKey
+          LANGSMITH_ENDPOINT: "https://api.smith.langchain.com"
+          DYNAMO_DB_CHECKPOINT_TABLE: !Ref CheckpointTable
+          CREDENTIALS_API_URL: !Ref CredentialsAPIUrl
+          CREDENTIALS_API_X_API_KEY: !Ref CredentialsAPIXApiKey
+
+          LOCAL_SENDER_FUNCTION_URL: "http://host.docker.internal:3000/send_message"
+          SENDER_FUNCTION_ARN: !GetAtt SlackMessageSenderFunction.Arn
+          
+          # Add environment variables needed for MCP and uvx
+          PYTHONUNBUFFERED: "1"
+          PATH: "/usr/local/bin:/usr/bin:/bin:/var/task"
+          UV_CACHE_DIR: "/tmp/uv_cache"
+          UV_TOOL_DIR: "/tmp/uv_tools"
+          UV_PYTHON_INSTALL_DIR: "/tmp/uv_python"
+          XDG_CACHE_HOME: "/tmp/cache"
+          XDG_DATA_HOME: "/tmp/data"
+          TMPDIR: "/tmp"
+          TEMP: "/tmp"
+          TMP: "/tmp"
+          HOME: "/tmp"
+          # Additional UV configuration
+          UV_NO_SYNC: "1"
+          UV_SYSTEM_PYTHON: "1"
+      MemorySize: 10240
+      EphemeralStorage:
+        Size: 8192
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeTimeToLive
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:BatchWriteItem   # needed by the DynamoDBSaver implementation of https://pypi.org/project/langgraph-checkpoint-amazon-dynamodb/
+            Resource: !GetAtt CheckpointTable.Arn
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !GetAtt SlackMessageSenderFunction.Arn
+      Events:
+        SlackAgent:
+          Type: Api
+          Properties:
+            Path: /architecture_agent
+            Method: post
+    Metadata:
+      DockerContext: ./lmbd_agent_architecture_aws_mcp
+      Dockerfile: Dockerfile
+
+# * MESSAGE SENDER FUNCTION
+  SlackMessageSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lmbd_message_sender/
+      Handler: main.lambda_handler
+      Runtime: python3.10
+      MemorySize: 8192
+      Environment:
+        Variables:
+          SLACK_BOT_TOKEN: !Ref SlackBotToken
+          SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+          ENV: !Ref Environment
+          DYNAMO_DB_SESSION_TABLE: !Ref SessionTable
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+            Resource: !GetAtt SessionTable.Arn
+      Events:
+        SlackMessageSender:
+          Type: Api
+          Properties:
+            Path: /send_message
+            Method: post
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  SlackEventListenerApi:
+    Description: "API Gateway endpoint URL for Slack Event Listener function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/events"
+  SlackJSEventListenerFunction:
+    Description: "Slack Event Listener Lambda Function ARN"
+    Value: !GetAtt SlackJSEventListenerFunction.Arn
+  SlackEventListenerIamRole:
+    Description: "Implicit IAM Role created for Slack Event Listener function"
+    Value: !GetAtt SlackJSEventListenerFunctionRole.Arn
+  SlackEventsEndpoint:
+    Description: "Slack Events API endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/events"
+  SlackAgentApi:
+    Description: "API Gateway endpoint URL for Slack Agent function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/research_agent"
+  QAResearchAgentFunction:
+    Description: "Slack Agent Lambda Function ARN"
+    Value: !GetAtt QAResearchAgentFunction.Arn
+  SlackMessageEvaluatorFunction:
+    Description: "Slack Message Evaluator Lambda Function ARN"
+    Value: !GetAtt SlackMessageRouter.Arn
+  SlackAgentEndpoint:
+    Description: "Slack Agent API endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/research_agent"
+  SessionTableName:
+    Description: "DynamoDB Table for sessions"
+    Value: !Ref SessionTable
+  LogTableName:
+    Description: "DynamoDB Table for message logging"
+    Value: !Ref LogTable
+  SqsMessageProcessorFunction:
+    Description: "SQS Message Processor Lambda Function ARN"
+    Value: !GetAtt SqsMessageProcessor.Arn
+  ArchitectureAgentFunction:
+    Description: "Architecture Agent Lambda Function ARN"
+    Value: !GetAtt ArchitectureAgentFunction.Arn
+  SlackMessageSenderFunction:
+    Description: "Slack Message Sender Lambda Function ARN"
+    Value: !GetAtt SlackMessageSenderFunction.Arn
+  SlackMessageSenderEndpoint:
+    Description: "Slack Message Sender API endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/send_message"

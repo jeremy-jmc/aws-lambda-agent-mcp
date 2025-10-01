@@ -1,0 +1,25 @@
+# Required by the implementation
+langchain-community==0.3.18
+langchain-core==0.3.74
+langgraph-checkpoint-amazon-dynamodb==0.1.2
+langchain-mcp-adapters==0.1.7
+langgraph==0.4.8
+langgraph-checkpoint==2.0.26
+langchain-aws==0.2.15
+langchain-anthropic==0.3.7
+python-dotenv==1.1.0
+uv==0.8.13
+uvicorn==0.34.0
+mcp==1.9.3
+mcp-server-fetch==2025.4.7
+pytz==2024.2
+nest-asyncio==1.6.0
+requests
+
+# Required by MCP
+scipy
+scikit-learn
+networkx
+lxml
+botocore
+boto3

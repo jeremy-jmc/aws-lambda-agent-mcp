@@ -1,0 +1,50 @@
+[
+    {
+        "name": "John Doe",
+        "role": "CEO",
+        "email": "",
+        "education": "",
+        "primary_goals": [
+            {
+                "team": "sales",
+                "goal_description": ""
+            },
+            {
+                "team": "technology",
+                "goal_description": "Updated the team with the best and latest practices in software development, ensuring high-quality deliverables for the clients."
+            },
+            {
+                "team": "ai",
+                "goal_description": "Stay updated with the latest AI trends and technologies to impulse initiatives that enhance our product offerings."
+            }
+        ],
+        "channels_list": [
+            "technology", 
+            "ai-team"
+        ]
+    },
+    {
+        "name": "Foo Bar",
+        "role": "AI Engineer",
+        "channels_list": [
+            "technology",
+            "ai-team"
+        ]
+    },
+    {
+        "name": "Bob Example",
+        "role": "AI Engineer",
+        "channels_list": [
+            "technology", 
+            "ai-team"
+        ]
+    },
+    {
+        "name": "Jane Roe",
+        "role": "AI Engineer",
+        "channels_list": [
+            "technology",
+            "ai-team"
+        ]
+    }
+]

@@ -1,0 +1,8 @@
+{
+  "body": "{\"channel\":\"bot-dev\",\"from\":\"John Doe\",\"message\":\"buen día @Foo Bar, prepara un benchmark de Claude code vs Cursor y revisemos la prox semana, nos subes a todos de este canal por favor\",\"timestamp\":\"2025-01-11T10:00:00Z\",\"user_id\":\"U12345678\",\"thread_ts\":\"\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "httpMethod": "POST",
+  "path": "/agent"
+}
