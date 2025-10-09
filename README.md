@@ -1,4 +1,4 @@
-# TARS Multi-Agent Architecture
+# Multi-Agent Architecture
 
 ## AWS Architecture Diagram (Current)
 
